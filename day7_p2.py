@@ -11,11 +11,12 @@ def get_data(loc):
     with open(loc) as f:
         rawdata = f.read().split(',')
     return list(map(int,rawdata))        
-class Amplifier:
-    def __def__(self, program_location, phase_setting):
+class Amplifier():
+    def __init__(self, program_location, phase_setting):
         self.inputs = Queue()
         self.inputs.put(phase_setting)
-        self.output = None
+        self.outputs = None
+        self.all_outputs=Queue()
         self.pointer = 0
         self.intcode_program = get_data(program_location)
         self.halted = False
@@ -23,13 +24,13 @@ class Amplifier:
     def run_program(self):
         while True:
             self.iteration += 1
-            if self.pointer >=len(self.intcode_program)-1:
-                raise Exception(f"Pointer at end of program, pointer:{self.pointer}, program length: {len(self.intcode_program)}")
             opcode_to_process = self.intcode_program[self.pointer]
             if opcode_to_process%100 == 99:
                 logging.debug(f"Program halted without error after {self.iteration} iterations")
                 self.halted = True
                 return
+            if self.pointer >=len(self.intcode_program)-1:
+                raise Exception(f"Pointer at end of program, pointer:{self.pointer}, program length: {len(self.intcode_program)}")
             # print(f"Iteration {iteration}, pointer:{pointer}, opcode:{opcode_to_process}")
             # print(intcode_program[pointer:pointer+4])
             arg1,arg2=None,None
@@ -59,42 +60,67 @@ class Amplifier:
 
             if opcode == 1:
                 self.intcode_program[p3] = arg1 + arg2
-                pointer += 4
+                self.pointer += 4
             elif opcode == 2:
                 self.intcode_program[p3] = arg1 * arg2
-                pointer += 4
+                self.pointer += 4
             elif opcode == 3:
-                self.intcode_program[p1] = self.inputs.put()
-                pointer += 2
+                if self.inputs.empty():
+                    return
+                self.intcode_program[p1] = self.inputs.get_nowait()
+                self.pointer += 2
             elif opcode == 4:
-                self.output.append(arg1)
-                pointer += 2
-                return
+                self.outputs.put(arg1)
+                self.all_outputs.put(arg1)
+                self.pointer += 2
             elif opcode == 5:
                 if arg1 != 0:
-                    pointer = arg2
+                    self.pointer = arg2
                 else:
-                    pointer += 3
+                    self.pointer += 3
             elif opcode == 6:
                 if arg1 == 0:
-                    pointer = arg2
+                    self.pointer = arg2
                 else:
-                    pointer += 3
+                    self.pointer += 3
             elif opcode == 7:
                 if arg1 < arg2:
                     self.intcode_program[p3] = 1
                 else:
                     self.intcode_program[p3] = 0
-                pointer += 4
+                self.pointer += 4
             elif opcode == 8:
                 if arg1 == arg2:
                     self.intcode_program[p3] = 1
                 else:
                     self.intcode_program[p3] = 0
-                pointer += 4
+                self.pointer += 4
             else:
                 raise Exception(f"Unknown opcode:{opcode} on iteration {self.iteration}")
 
-sequence=[9,8,7,6,5]
+def run_permutations(part):
+    max_val = 0
+    x = range(5) if part ==1 else range(5,10)
+
+    for sequence in map(list,permutations(x)):
+        amplifiers=[Amplifier(program_location, phase_setting) for phase_setting in sequence]
+        for i in range(5):
+            # hooking the amplifiers inputs and outputs together
+            amplifiers[i].outputs = amplifiers[(i+1)%5].inputs
+        amplifiers[0].inputs.put(0) #initialize the first amplifier with zero
+
+        while amplifiers[4].halted==False:
+            for i,a in enumerate(amplifiers):
+                if a.halted==False:
+                    a.run_program()
+        while not amplifiers[4].all_outputs.empty():
+            last_output=amplifiers[4].all_outputs.get_nowait()
+        max_val = max(last_output,max_val)
+    return max_val
+
 program_location = './data/day7.txt'
-[Amplifier(program_location, phase_setting) for phase_setting in sequence]
+print('p1',run_permutations(1))
+print('p2',run_permutations(2))
+
+
+
