@@ -128,6 +128,12 @@ def run_permutations_multithreaded(part):
     return max_val
 
 # Run the multithreaded version
+start=time.time()
 program_location = './data/day7.txt'
 print('p1', run_permutations_multithreaded(1))
 print('p2', run_permutations_multithreaded(2))
+print(f'Finished Multithreaded in {time.time()-start:.2f}s')
+
+# p1 880726
+# p2 4931744
+# Finished Multithreaded in 0.50s

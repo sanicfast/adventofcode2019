@@ -6,7 +6,6 @@ from queue import Queue
 # logging.basicConfig(level=logging.DEBUG)
 logging.basicConfig(level=logging.INFO)
 
-
 def get_data(loc):
     with open(loc) as f:
         rawdata = f.read().split(',')
@@ -118,9 +117,12 @@ def run_permutations(part):
         max_val = max(last_output,max_val)
     return max_val
 
+start=time.time()
 program_location = './data/day7.txt'
 print('p1',run_permutations(1))
 print('p2',run_permutations(2))
-
-
+print(f'Finished Single Threaded in {time.time()-start:.2f}s')
+# p1 880726
+# p2 4931744
+# Finished Single Threaded in 0.28s
 
